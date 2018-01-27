@@ -6,11 +6,13 @@ import tensorflow as tf
 space = spaces.Discrete(8) # Set with 8 elements {0, 1, 2, ..., 7}
 x = space.sample()
 
-env = gym.make('CartPole-v0')
+env = gym.make('MountainCar-v0')
 
 print(env.action_space)
 #> Discrete(2)
 print(env.observation_space)
+print(env.observation_space.high)
+exit()
 #> Box(4,)
 
 print(env.observation_space.high)
