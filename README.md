@@ -1,1 +1,1 @@
-# gym_agents
+After doing a few Andrew Ng courses on coursera, decided to give reinforcement learning a try.  Both agents sovle the same probelm in basically the same way, but one uses straight python code and the other does it in tensorflow.  Doing it without tensorflow gave me a much better idea of what's going on.
