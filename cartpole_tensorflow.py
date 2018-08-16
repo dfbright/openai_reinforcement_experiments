@@ -2,7 +2,8 @@ import gym
 import numpy as np
 import tensorflow as tf
 
-learning_rate = 1.2
+trace_episode_count_num = 200
+num_hidden_layers = 10
 gamma = 0.97
 
 
@@ -13,7 +14,6 @@ class EpisodeBag:
         """
         self.observations = EpisodeBag.concat_bagged(lambda bag: bag.observation_vector, steps, 0)
         self.actions = EpisodeBag.concat_bagged(lambda bag: bag.action_vector, steps)
-        #self.A2 = EpisodeBag.concat_bagged(lambda bag: bag.A2, steps)
 
         # calculate discounted rewards
         rewards = list(map(lambda bag: bag.reward, steps))
@@ -34,8 +34,7 @@ class EpisodeBag:
             future_reward = 0
             for j in range(len(rewards) - index):
                 reward = rewards[j + index]
-                very_discounted = gamma ** j
-                temp_reward = very_discounted * reward
+                temp_reward = (gamma ** j) * reward
                 future_reward += temp_reward
             new_rewards[0][index] = future_reward
         return new_rewards
@@ -65,9 +64,8 @@ class GraphBag:
 
 
 def run_episodes():
-    n_h_1 = 5
     env = gym.make('CartPole-v0')
-    graph_bag = create_graph(n_h_1, 2)
+    graph_bag = create_graph(2)
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         do_render = False
@@ -83,7 +81,7 @@ def run_episodes():
             render_episode_counter += episodes_per_batch
             episode_number += episodes_per_batch
 
-            if render_episode_counter >= 200:
+            if render_episode_counter >= trace_episode_count_num:
                 render_episode_counter = 0
                 print('episode number:  ' + str(episode_number))
                 print('steps passed:    ' + str(np.mean(all_steps)))
@@ -96,17 +94,17 @@ def run_episodes():
                 do_render = False
 
 
-def create_graph(n_h_1, action_count):
+def create_graph(action_count):
     X = tf.placeholder(name='X', dtype=tf.float32, shape=(None, 4))
 
-    W1 = tf.get_variable(name='W1', shape=(4, n_h_1), dtype=tf.float32,
+    W1 = tf.get_variable(name='W1', shape=(4, num_hidden_layers), dtype=tf.float32,
                          initializer=tf.contrib.layers.xavier_initializer())
-    b1 = tf.get_variable(name='b1', shape=(1, n_h_1), dtype=tf.float32,
+    b1 = tf.get_variable(name='b1', shape=(1, num_hidden_layers), dtype=tf.float32,
                          initializer=tf.zeros_initializer())
     Z1 = tf.add(tf.matmul(X, W1), b1, name='Z1')
     A1 = tf.nn.relu(Z1, name='A1')
 
-    W2 = tf.get_variable(name='W2', shape=(n_h_1, action_count), dtype=tf.float32,
+    W2 = tf.get_variable(name='W2', shape=(num_hidden_layers, action_count), dtype=tf.float32,
                          initializer=tf.contrib.layers.xavier_initializer())
     b2 = tf.get_variable(name='b2', shape=(1, action_count), dtype=tf.float32,
                          initializer=tf.zeros_initializer())
@@ -156,30 +154,13 @@ def back_prop(sess, graph_bag, episode_bag):
     })
     return loss
 
-def back_prop_2(sess, graph_bag, episode_bag):
-    """
-    :type sess: tf.Session
-    :type graph_bag: GraphBag
-    :type episode_bag: EpisodeBag
-    """
-    grads_and_vars_values = sess.run([graph_bag.grads_and_vars], feed_dict={
-        graph_bag.X: episode_bag.observations,
-        graph_bag.actions: episode_bag.normalized_actions.T
-    })
-
-    loss = sess.run([graph_bag.apply_updates], feed_dict={
-        graph_bag.grads_and_vars: grads_and_vars_values
-    })
-
-    pass
-
 
 def run_steps(env, sess, graph_bag, do_render):
     """
+    :type env: gym.Env
     :type sess: tf.Session
     :type graph_bag: GraphBag
     :type do_render: bool
-    :type X: np.ndarray
     """
     observation = env.reset()
     step_bags = []
@@ -188,6 +169,7 @@ def run_steps(env, sess, graph_bag, do_render):
         probs_of_up_or_down = sess.run([graph_bag.prob], feed_dict={
             graph_bag.X: obs_vector
         })
+
         action = 0 if np.random.uniform(0, 1) < probs_of_up_or_down[0][0][0] else 1
         action_vector = np.zeros((2, 1))
         action_vector[action] = 1
@@ -204,15 +186,13 @@ def run_steps(env, sess, graph_bag, do_render):
 
 def normalize_rewards_over_episodes(episode_bags):
     """
-
     :type episode_bags: list[EpisodeBag]
     """
-    ravelled_rewards = np.concatenate(list(map(lambda bag: bag.discounted_rewards, episode_bags)), axis = 1)
+    ravelled_rewards = np.concatenate(list(map(lambda bag: bag.discounted_rewards, episode_bags)), axis=1)
     mean = np.mean(ravelled_rewards)
     std = np.std(ravelled_rewards)
 
     for episode_bag in episode_bags:
         episode_bag.normalize_rewards(mean, std)
-
 
 run_episodes()

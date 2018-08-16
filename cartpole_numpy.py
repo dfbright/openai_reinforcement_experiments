@@ -1,24 +1,24 @@
 import gym
 from gym import spaces
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
+
+
+num_hidden_layers = 5
 
 space = spaces.Discrete(8) # Set with 8 elements {0, 1, 2, ..., 7}
 x = space.sample()
 
-env = gym.make('MountainCar-v0')
+env = gym.make('CartPole-v0')
 
 print(env.action_space)
 #> Discrete(2)
 print(env.observation_space)
 print(env.observation_space.high)
-exit()
 #> Box(4,)
 
 print(env.observation_space.high)
-#> array([ 2.4       ,         inf,  0.20943951,         inf])
 print(env.observation_space.low)
-#> array([-2.4       ,        -inf, -0.20943951,        -inf])
 
 #x = Box(4)
 #y? = Discrete(2)
@@ -78,7 +78,6 @@ def update_parameters(W1, b1, W2, b2, dW1, db1, dW2, db2):
 
 
 def calc_rewards(rewards, discount_rate):
-    #new_rewards = []
     new_rewards = np.empty(shape=(1,len(rewards)))
     for index in range(len(rewards)):
         future_reward = 0
@@ -105,6 +104,7 @@ def run_episode(env, W1, b1, W2, b2, do_render, episode_batch_size):
         episode_bags.append(episode_bag)
 
     normalize_rewards_over_episodes(episode_bags)
+
     #Trying out applying gradients over an entire episode at a time
     dW1, db1, dW2, db2 = run_back_prop_over_episodes(W1, b1, W2, b2, episode_bags)
     W1, b1, W2, b2 = update_parameters(W1, b1, W2, b2, dW1, db1, dW2, db2)
@@ -112,8 +112,6 @@ def run_episode(env, W1, b1, W2, b2, do_render, episode_batch_size):
 
 
 def run_back_prop_over_episodes(og_W1, og_b1, og_W2, og_b2, episode_bags):
-    gradients = []
-
     for episode_bag in episode_bags:
         dW1, db1, dW2, db2 = back_prop(episode_bag.action_vector_m, episode_bag.obs_vector_m, episode_bag.A1_m,
                                        og_W2, episode_bag.A2_m, episode_bag.normalized_rewards)
@@ -151,8 +149,7 @@ class EpisodeBag:
         self.normalized_action_vector = None
 
     def normalize_rewards(self, mean, std):
-        normalized_rewards = self.discounted_rewards - mean
-        self.normalized_rewards = normalized_rewards / std
+        self.normalized_rewards = (self.discounted_rewards - mean) / std
         #self.normalized_action_vector = self.action_vector_m * normalized_rewards
         #self.grad_on_existing_actions =  self.action_vector_m - self.A2_m
 
@@ -199,7 +196,7 @@ def concat_bagged(bag_func, fpb):
 
 
 def normalize_rewards_over_episodes(episode_bags):
-    ravelled_rewards = np.concatenate(list(map(lambda bag: bag.discounted_rewards, episode_bags)), axis = 1)
+    ravelled_rewards = np.concatenate(list(map(lambda bag: bag.discounted_rewards, episode_bags)), axis=1)
     mean = np.mean(ravelled_rewards)
     std = np.std(ravelled_rewards)
 
@@ -208,10 +205,9 @@ def normalize_rewards_over_episodes(episode_bags):
 
 
 def run_episodes():
-    n_h_1 = 5
-    W1 = np.random.randn(n_h_1, 4).astype(np.float32) * np.sqrt(2.0 / 4)
-    b1 = np.zeros(shape=(n_h_1, 1))
-    W2 = np.random.randn(2, n_h_1).astype(np.float32) * np.sqrt(2.0 / n_h_1)
+    W1 = np.random.randn(num_hidden_layers, 4).astype(np.float32) * np.sqrt(2.0 / 4)
+    b1 = np.zeros(shape=(num_hidden_layers, 1))
+    W2 = np.random.randn(2, num_hidden_layers).astype(np.float32) * np.sqrt(2.0 / num_hidden_layers)
     b2 = np.zeros(shape=(2, 1))
 
     do_render = False
