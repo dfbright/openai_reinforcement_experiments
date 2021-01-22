@@ -1,1 +1,4 @@
-After doing a few Andrew Ng courses on coursera, I decided to give reinforcement learning a try.  Both agents solve the same problem in basically the same way, but one uses straight python \ numpy and the other does it in tensorflow.  Doing it without tensorflow always gives me a much better idea of what's actually going on.
+After doing a few Andrew Ng courses on coursera, I decided to give reinforcement learning a try.  Both agents balance a pole on a cart, but one does it with tensor flow and the other does it with numpy.
+
+Here is (someone else's) video of the game:
+https://www.youtube.com/watch?v=Qk61tqRrj0E
